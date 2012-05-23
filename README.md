@@ -40,3 +40,6 @@ Box results when nodes are sparse:
 The two superimposed:
 
 ![Zoom previews](https://github.com/nvkelso/pygraticule/raw/master/images/robinson_plus_box.png)
+
+The proj4 string for Robinson is:
+`+proj=robin +lon_0=0 +x_0=0 +y_0=0 +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs`
