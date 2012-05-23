@@ -9,7 +9,7 @@ Modifications by Nathaniel Vaughn KELSO.
 
 #Usage
 
-`python pygraticule.py -s 1 -o outfile.geojson`
+`python pygraticule.py -g 1 -s 1 -o outfile.geojson`
 
 There are two script arguments for controlling the density of nodes and the output file name: 
 
