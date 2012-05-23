@@ -25,11 +25,11 @@ parser = OptionParser(usage="""%prog [options]
 
 Generates a GeoJSON file with graticules spaced at specified interval.""")
 
-parser.add_option('-g', '--grid_interval', dest='grid_interval', default=1, type='float',
+parser.add_option('-g', '--grid_interval', dest='grid_interval', default=1.0, type='float',
                   help='Grid interval in decimal degrees, defaults to 1.')
 
 parser.add_option('-s', '--step_interval', dest='step_interval', default=0.5, type='float',
-                  help='Step interval in decimal degrees, defaults to 1.')
+                  help='Step interval in decimal degrees, defaults to 0.5.')
 
 parser.add_option('-o', dest='outfilename', default='',
                   help='Output filename (with or without path), defaults to "graticule_1dd.geojson".')
