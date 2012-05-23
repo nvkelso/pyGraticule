@@ -25,7 +25,10 @@ parser = OptionParser(usage="""%prog [options]
 
 Generates a GeoJSON file with graticules spaced at specified interval.""")
 
-parser.add_option('-s', '--step_interval', dest='step_interval', default=1, type='int',
+parser.add_option('-g', '--grid_interval', dest='grid_interval', default=1, type='float',
+                  help='Grid interval in decimal degrees, defaults to 1.')
+
+parser.add_option('-s', '--step_interval', dest='step_interval', default=0.5, type='float',
                   help='Step interval in decimal degrees, defaults to 1.')
 
 parser.add_option('-o', dest='outfilename', default='',
@@ -35,11 +38,18 @@ parser.add_option('-o', dest='outfilename', default='',
 #                  help='Output a SHP file, defaults to False and requires ORG/GDAL.')
 
 
+def frange(x, y, jump):
+    while x < y:
+        yield x
+        x += jump
+
+
 (options, args) = parser.parse_args()
 
-
 #set the stepping of the increment, converting from string to interger
-step = options.step_interval
+grid_accuracy = options.grid_interval
+step_precision = options.step_interval
+
 # destination file
 out_file = options.outfilename
 if out_file:
@@ -51,7 +61,7 @@ else:
     # destination file
     out_extension = 'geojson'
     # for the demo, we put the results in an "output dir for prettier results    
-    out_name = ('graticule_%ddd') % (step)
+    out_name = ('graticule_%ddd') % (grid_accuracy)
     out_file = out_dir + out_name + '.' + out_extension
 
 # If the output directory doesn't exist, make it so we don't error later on file open()
@@ -59,29 +69,29 @@ if not os.path.exists(out_dir):
     print 'making dir...'
     os.makedirs(out_dir)
 
-grid = open(out_file,"w")
+grid_file = open(out_file,"w")
 
 # Stub out the GeoJSON format wrapper
 header = ['{ "type": "FeatureCollection",','"features": [']
 footer = [']','}']
 
-grid.writelines(header)
+grid_file.writelines(header)
     
 # Create Geojson lines horizontal, latitude
-for x in range(-90,91,step):
+for x in frange(-90,91,grid_accuracy):
     featstart = '''{ "type": "Feature",
       "geometry": {
         "type": "LineString",
         "coordinates": ['''
-    grid.write(featstart)
-    for y in range(-180,181,1):
+    grid_file.write(featstart)
+    for y in frange(-180,181,step_precision):
         if y == -180:
-            grid.write("[")
+            grid_file.write("[")
         else:
-            grid.write(",[")
+            grid_file.write(",[")
         #print y,x
-        grid.write(",".join([str(y),str(x)]))
-        grid.write("]")
+        grid_file.write(",".join([str(y),str(x)]))
+        grid_file.write("]")
     # Figure out if it's North or South
     if x >= 0:
         direction = "N"
@@ -96,23 +106,23 @@ for x in range(-90,91,step):
       "dd":%d,
         }
       },\n''' % (abs(x),direction,label,x)
-    grid.write(featend)
+    grid_file.write(featend)
 
 # Create lines vertical
-for y in range(-180,181,step):
+for y in frange(-180,181,grid_accuracy):
     featstart = '''{ "type": "Feature",
       "geometry": {
         "type": "LineString",
         "coordinates": ['''
-    grid.write(featstart)
-    for x in range(-90,91,1):
+    grid_file.write(featstart)
+    for x in frange(-90,91,step_precision):
         if x == -90:
-            grid.write("[")
+            grid_file.write("[")
         else:
-            grid.write(",[")
+            grid_file.write(",[")
         #print y,x
-        grid.write(",".join([str(y),str(x)]))
-        grid.write("]")
+        grid_file.write(",".join([str(y),str(x)]))
+        grid_file.write("]")
         
     # Figure out if it's East or West
     if y >= 0:
@@ -128,10 +138,10 @@ for y in range(-180,181,step):
       "dd":%d,
         }
       },\n''' % (abs(y),direction,label,y)
-    grid.write(featend)
+    grid_file.write(featend)
 
-grid.writelines(footer)
-grid.close()
+grid_file.writelines(footer)
+grid_file.close()
 
 #if shapefile:
 #    try:
