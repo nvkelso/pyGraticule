@@ -9,12 +9,12 @@ Modifications by Nathaniel Vaughn KELSO.
 
 #Usage
 
-`python pygraticule.py -g 1 -s 1 -o outfile.geojson`
+`python pygraticule.py -g 1 -o outfile.geojson`
 
 There are two script arguments for controlling the density of nodes and the output file name: 
 
 * **g** is the grid interval is measured in decimal degrees: generally 69 miles at the equator, but varies at higher latitudes.
-* **s** is the step interval is measured in decimal degrees: generally every 0.5 a degree, add a vertex. Future work might vary this by latitude with a cosine()?
+* **s** optional, is the step interval is measured in decimal degrees: defaults to every 0.5 a degree, adds a vertex after that distance. Future work might vary this by latitude with a cosine()?
 * **o** is the outfile. If none is provided, file is auto named in this format: "graticule_1dd.geojson" where the number is the step interval.
 
 ## Limitations
