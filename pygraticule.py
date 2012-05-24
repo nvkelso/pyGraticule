@@ -34,8 +34,8 @@ parser.add_option('-s', '--step_interval', dest='step_interval', default=0.5, ty
 parser.add_option('-o', dest='outfilename', default='',
                   help='Output filename (with or without path), defaults to "graticule_1dd.geojson".')
 
-#parser.add_option('-p', '--shp', dest='shapefile', default=False, type='boolean",
-#                  help='Output a SHP file, defaults to False and requires ORG/GDAL.')
+parser.add_option('-f', dest='field_content', default='',
+                  help='Add extra fields with default values to the output.')
 
 
 def frange(x, y, jump):
@@ -49,6 +49,7 @@ def frange(x, y, jump):
 #set the stepping of the increment, converting from string to interger
 grid_accuracy = options.grid_interval
 step_precision = options.step_interval
+field_content = options.field_content
 
 # destination file
 out_file = options.outfilename
@@ -104,8 +105,9 @@ for x in frange(-90,91,grid_accuracy):
         "direction": "%s",
       "display":"%s",
       "dd":%d,
+      %s,
         }
-      },\n''' % (abs(x),direction,label,x)
+      },\n''' % (abs(x),direction,label,x, field_content)
     grid_file.write(featend)
 
 # Create lines vertical, longitude
@@ -136,15 +138,10 @@ for y in frange(-180,181,grid_accuracy):
         "direction": "%s",
       "display":"%s",
       "dd":%d,
+      %s,
         }
-      },\n''' % (abs(y),direction,label,y)
+      },\n''' % (abs(y),direction,label,y, field_content)
     grid_file.write(featend)
 
 grid_file.writelines(footer)
 grid_file.close()
-
-#if shapefile:
-#    try:
-#        ogr2ogr -f "ESRI Shapefile" out_file  out_file
-#    except:
-#        pass
