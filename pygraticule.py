@@ -108,7 +108,7 @@ for x in frange(-90,91,grid_accuracy):
       },\n''' % (abs(x),direction,label,x)
     grid_file.write(featend)
 
-# Create lines vertical
+# Create lines vertical, longitude
 for y in frange(-180,181,grid_accuracy):
     featstart = '''{ "type": "Feature",
       "geometry": {
