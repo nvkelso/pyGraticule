@@ -31,6 +31,9 @@ parser.add_option('-g', '--grid_interval', dest='grid_interval', default=1.0, ty
 parser.add_option('-s', '--step_interval', dest='step_interval', default=0.5, type='float',
                   help='Step interval in decimal degrees, defaults to 0.5.')
 
+parser.add_option('-p', '--polygon', dest='polygon', default=False, action='store_true',
+                  help='Create polygon output per fishnet cell intsead of graticule lines.')
+
 parser.add_option('-o', dest='outfilename', default='',
                   help='Output filename (with or without path), defaults to "graticule_1dd.geojson".')
 
@@ -49,7 +52,14 @@ def frange(x, y, jump):
 #set the stepping of the increment, converting from string to interger
 grid_accuracy = options.grid_interval
 step_precision = options.step_interval
-field_content = options.field_content
+field_content_raw = options.field_content
+polygonize = options.polygon
+
+if field_content_raw != ' ' and field_content_raw != '':
+    field_content = ''',
+                %s,''' % field_content_raw
+else:
+    field_content = ''
 
 # destination file
 out_file = options.outfilename
@@ -64,6 +74,9 @@ else:
     # for the demo, we put the results in an "output dir for prettier results    
     out_name = ('graticule_%ddd') % (grid_accuracy)
     out_file = out_dir + out_name + '.' + out_extension
+
+if polygonize:
+    out_file_polygon = out_dir + out_name + '_polygon' + '.' + out_extension
 
 # If the output directory doesn't exist, make it so we don't error later on file open()
 if not os.path.exists(out_dir):
@@ -80,7 +93,7 @@ grid_file.writelines(header)
     
 # Create Geojson lines horizontal, latitude
 for x in frange(-90,91,grid_accuracy):
-    featstart = '''{ "type": "Feature",
+    featstart = '''\n\t{ "type": "Feature",
       "geometry": {
         "type": "LineString",
         "coordinates": ['''
@@ -103,16 +116,16 @@ for x in frange(-90,91,grid_accuracy):
       "properties": {
         "degrees": %d,
         "direction": "%s",
-      "display":"%s",
-      "dd":%d,
-      %s,
+        "display":"%s",
+        "dd":%d
+        %s
         }
-      },\n''' % (abs(x),direction,label,x, field_content)
+      },''' % (abs(x),direction,label,x, field_content)
     grid_file.write(featend)
 
 # Create lines vertical, longitude
 for y in frange(-180,181,grid_accuracy):
-    featstart = '''{ "type": "Feature",
+    featstart = '''\t{ "type": "Feature",
       "geometry": {
         "type": "LineString",
         "coordinates": ['''
@@ -136,12 +149,79 @@ for y in frange(-180,181,grid_accuracy):
       "properties": {
         "degrees": %d,
         "direction": "%s",
-      "display":"%s",
-      "dd":%d,
-      %s,
+        "display":"%s",
+        "dd":%d
+        %s
         }
       },\n''' % (abs(y),direction,label,y, field_content)
     grid_file.write(featend)
 
 grid_file.writelines(footer)
 grid_file.close()
+
+
+if polygonize:
+    polygon_file = open(out_file_polygon,"w")
+    polygon_file.writelines(header)
+
+    # Create Geojson polygons
+    for x in frange(-90,90,grid_accuracy):
+        for y in frange(-180,180,grid_accuracy):
+            featstart = '''\t{ "type": "Feature",
+              "geometry": {
+                "type": "Polygon",
+                "coordinates": [[['''
+            polygon_file.write(featstart)
+
+            #if y == -180:
+            #    polygon_file.write("[")
+            #else:
+            #    polygon_file.write(",[")
+            #print y,x
+            #init upper left coord
+            polygon_file.write(",".join([str(y),str(x)]))
+            polygon_file.write("],[")
+            #upper right
+            polygon_file.write(",".join([str(y),str(x+grid_accuracy)]))
+            polygon_file.write("],[")
+            #lower right
+            polygon_file.write(",".join([str(y+step_precision),str(x+grid_accuracy)]))
+            polygon_file.write("],[")
+            #lower left
+            polygon_file.write(",".join([str(y+step_precision),str(x)]))
+            polygon_file.write("],[")
+            #back to close on init upper left coord
+            polygon_file.write(",".join([str(y),str(x)]))
+            polygon_file.write("]")
+
+            # Figure out if it's North or South
+            if x >= 0:
+                direction_x = "N"
+            else:
+                direction_x = "S"
+            if y >= 0:
+                direction_y = "E"
+            else:
+                direction_y = "W"
+            label = " ".join([str(abs(x)),direction_x,str(abs(y)),direction_y])
+            label_x = " ".join([str(abs(x)),direction_x])
+            label_y = " ".join([str(abs(y)),direction_y])
+            featend = ''']]},
+              "properties": {
+                "degree_x": %d,
+                "direction_x": "%s",
+                "display_x": "%s",
+                "dd_x":%d,
+                "degree_y": %d,
+                "direction_y": "%s",
+                "display_y": "%s",
+                "dd_y": %d,
+                "display": "%s"
+                %s
+                }
+              },\n''' % (abs(x),direction_x,label_x,x, abs(y),direction_y,label_y,y, label, field_content)
+            
+            polygon_file.write(featend)
+        
+    polygon_file.writelines(footer)
+    polygon_file.close()
