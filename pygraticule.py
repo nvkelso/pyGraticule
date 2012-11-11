@@ -230,6 +230,7 @@ if polygonize:
 				
 				polygon_file.write(featend)
 			
+    # Logic roughly adapted from: http://michaelminn.com/linux/mmqgis/
     if grid_type == 'hex':
 		vspacing = grid_accuracy
 		originx = -90 - grid_accuracy / 2
