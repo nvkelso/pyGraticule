@@ -28,11 +28,11 @@ Generates a GeoJSON file with graticules spaced at specified interval.""")
 parser.add_option('-g', '--grid_interval', dest='grid_interval', default=1.0, type='float',
                   help='Grid interval in decimal degrees, defaults to 1.')
 
+parser.add_option('-t', '--grid_type', dest='grid_type', default="line",
+                  help='Grid type, defaults to `line` (polyline), other values `rectangle` (polygon) and `hex` (polygon).')
+
 parser.add_option('-s', '--step_interval', dest='step_interval', default=0.5, type='float',
                   help='Step interval in decimal degrees, defaults to 0.5.')
-
-parser.add_option('-p', '--polygon', dest='polygon', default=False, action='store_true',
-                  help='Create polygon output per fishnet cell intsead of graticule lines.')
 
 parser.add_option('-o', dest='outfilename', default='',
                   help='Output filename (with or without path), defaults to "graticule_1dd.geojson".')
@@ -53,7 +53,12 @@ def frange(x, y, jump):
 grid_accuracy = options.grid_interval
 step_precision = options.step_interval
 field_content_raw = options.field_content
-polygonize = options.polygon
+grid_type = options.grid_type
+
+if grid_type == 'line':
+	polygonize = False
+else:
+	polygonize = True
 
 if field_content_raw != ' ' and field_content_raw != '':
     field_content = ''',
@@ -164,64 +169,145 @@ if polygonize:
     polygon_file = open(out_file_polygon,"w")
     polygon_file.writelines(header)
 
-    # Create Geojson polygons
-    for x in frange(-90,90,grid_accuracy):
-        for y in frange(-180,180,grid_accuracy):
-            featstart = '''\t{ "type": "Feature",
-              "geometry": {
-                "type": "Polygon",
-                "coordinates": [[['''
-            polygon_file.write(featstart)
+    if grid_type == 'rectangle':
+		
+		# Create Geojson polygons
+		for x in frange(-90,90,grid_accuracy):
+			for y in frange(-180,180,grid_accuracy):
+				featstart = '''\t{ "type": "Feature",
+				  "geometry": {
+					"type": "Polygon",
+					"coordinates": [[['''
+				polygon_file.write(featstart)
+	
+				#if y == -180:
+				#    polygon_file.write("[")
+				#else:
+				#    polygon_file.write(",[")
+				#print y,x
+				#init upper left coord
+				polygon_file.write(",".join([str(y),str(x)]))
+				polygon_file.write("],[")
+				#upper right
+				polygon_file.write(",".join([str(y),str(x+grid_accuracy)]))
+				polygon_file.write("],[")
+				#lower right
+				polygon_file.write(",".join([str(y+grid_accuracy),str(x+grid_accuracy)]))
+				polygon_file.write("],[")
+				#lower left
+				polygon_file.write(",".join([str(y+grid_accuracy),str(x)]))
+				polygon_file.write("],[")
+				#back to close on init upper left coord
+				polygon_file.write(",".join([str(y),str(x)]))
+				polygon_file.write("]")
+	
+				# Figure out if it's North or South
+				if x >= 0:
+					direction_x = "N"
+				else:
+					direction_x = "S"
+				if y >= 0:
+					direction_y = "E"
+				else:
+					direction_y = "W"
+				label = " ".join([str(abs(x)),direction_x,str(abs(y)),direction_y])
+				label_x = " ".join([str(abs(x)),direction_x])
+				label_y = " ".join([str(abs(y)),direction_y])
+				featend = ''']]},
+				  "properties": {
+					"degree_x": %d,
+					"direction_x": "%s",
+					"display_x": "%s",
+					"dd_x":%d,
+					"degree_y": %d,
+					"direction_y": "%s",
+					"display_y": "%s",
+					"dd_y": %d,
+					"display": "%s"
+					%s
+					}
+				  },\n''' % (abs(x),direction_x,label_x,x, abs(y),direction_y,label_y,y, label, field_content)
+				
+				polygon_file.write(featend)
+			
+    if grid_type == 'hex':
+		vspacing = grid_accuracy
+		originx = -90 - grid_accuracy / 2
+		originy = -180 - grid_accuracy / 2
+		width = 180 + grid_accuracy
+		height = 360 + grid_accuracy
+		#originx = -180
+		#originy = -90
+		#width = 360
+		#height = 180
+		
+		# To preserve symmetry, hspacing is fixed relative to vspacing
+		xvertexlo = 0.288675134594813 * vspacing;
+		xvertexhi = 0.577350269189626 * vspacing;
+		hspacing = xvertexlo + xvertexhi
 
-            #if y == -180:
-            #    polygon_file.write("[")
-            #else:
-            #    polygon_file.write(",[")
-            #print y,x
-            #init upper left coord
-            polygon_file.write(",".join([str(y),str(x)]))
-            polygon_file.write("],[")
-            #upper right
-            polygon_file.write(",".join([str(y),str(x+grid_accuracy)]))
-            polygon_file.write("],[")
-            #lower right
-            polygon_file.write(",".join([str(y+step_precision),str(x+grid_accuracy)]))
-            polygon_file.write("],[")
-            #lower left
-            polygon_file.write(",".join([str(y+step_precision),str(x)]))
-            polygon_file.write("],[")
-            #back to close on init upper left coord
-            polygon_file.write(",".join([str(y),str(x)]))
-            polygon_file.write("]")
+		x = originx + xvertexhi
+		# print str(x) + ", " + str(-180 + width)
+		
+		colnum = 0
+		while x < (originx + width):
+			if (colnum % 2) == 0:
+				y = originy + (vspacing / 2.0)
+			else:
+				y = originy + vspacing
 
-            # Figure out if it's North or South
-            if x >= 0:
-                direction_x = "N"
-            else:
-                direction_x = "S"
-            if y >= 0:
-                direction_y = "E"
-            else:
-                direction_y = "W"
-            label = " ".join([str(abs(x)),direction_x,str(abs(y)),direction_y])
-            label_x = " ".join([str(abs(x)),direction_x])
-            label_y = " ".join([str(abs(y)),direction_y])
-            featend = ''']]},
-              "properties": {
-                "degree_x": %d,
-                "direction_x": "%s",
-                "display_x": "%s",
-                "dd_x":%d,
-                "degree_y": %d,
-                "direction_y": "%s",
-                "display_y": "%s",
-                "dd_y": %d,
-                "display": "%s"
-                %s
-                }
-              },\n''' % (abs(x),direction_x,label_x,x, abs(y),direction_y,label_y,y, label, field_content)
-            
-            polygon_file.write(featend)
-        
+			# print str(x) + "," + str(y)
+
+			while y < (originy + height):
+				featstart = '''\t{ "type": "Feature",
+						"geometry": {
+						"type": "Polygon",
+						"coordinates": [[['''
+				polygon_file.write(featstart)
+
+				polygon_file.write(",".join([str(y),str(x + xvertexhi)]))
+				polygon_file.write("],[")
+				#upper right
+				polygon_file.write(",".join([str(y + (vspacing / 2.0)),str(x + xvertexlo)]))
+				polygon_file.write("],[")
+				#upper right
+				polygon_file.write(",".join([str(y + (vspacing / 2.0)),str(x - xvertexlo)]))
+				polygon_file.write("],[")
+				#upper right
+				polygon_file.write(",".join([str(y),str(x - xvertexhi)]))
+				polygon_file.write("],[")
+				#upper right
+				polygon_file.write(",".join([str(y - (vspacing / 2.0)),str(x - xvertexlo)]))
+				polygon_file.write("],[")
+				#upper right
+				polygon_file.write(",".join([str(y - (vspacing / 2.0)),str(x + xvertexlo)]))
+				polygon_file.write("],[")
+				#back to close on init upper left coord
+				polygon_file.write(",".join([str(y),str(x + xvertexhi)]))
+				polygon_file.write("]")
+
+				#polyline = []
+				#polyline.append([x + xvertexhi, y])
+				#polyline.append([x + xvertexlo, y + (vspacing / 2.0)])
+				#polyline.append([x - xvertexlo, y + (vspacing / 2.0)])
+				#polyline.append([x - xvertexhi, y])
+				#polyline.append([x - xvertexlo, y - (vspacing / 2.0)])
+				#polyline.append([x + xvertexlo, y - (vspacing / 2.0)])
+		
+				#print polyline
+
+				featend = ''']]},
+				  "properties": { }
+				  },\n'''
+				
+				polygon_file.write(featend)
+
+				# add attributes
+				# write to meta string (x, y)
+				y = y + vspacing;
+
+			x = x + hspacing
+			colnum = colnum + 1
+		
     polygon_file.writelines(footer)
     polygon_file.close()
